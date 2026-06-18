@@ -267,11 +267,18 @@ class MockSurrogate:
 # ---------------------------------------------------------------------------
 # Module-level surrogate instance
 # ---------------------------------------------------------------------------
-# To swap in the real PyTorch model, replace this one line:
-#   from surrogate.model import RealSurrogate
-#   SURROGATE = RealSurrogate.load("surrogate/checkpoints/best.pt")
+# Real AffinityMLP trained on EGFR (CHEMBL203) ChEMBL IC50 data.
+# Falls back to MockSurrogate if the checkpoint doesn't exist yet.
 
-SURROGATE = MockSurrogate()
+import os as _os
+_CKPT = _os.path.join(_os.path.dirname(__file__), "surrogate", "checkpoints", "best.pt")
+
+if _os.path.exists(_CKPT):
+    from surrogate.model import AffinityMLP as _AffinityMLP
+    SURROGATE = _AffinityMLP.load(_CKPT)
+else:
+    print("[fitness] WARNING: no checkpoint found, using MockSurrogate")
+    SURROGATE = MockSurrogate()
 
 
 # ---------------------------------------------------------------------------

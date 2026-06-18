@@ -87,6 +87,7 @@ class EAConfig:
     tournament_k: int   = TOURNAMENT_K
     seed:         Optional[int] = 42
     log_every:    int   = 10
+    verbose:      bool  = True
 
 
 # ---------------------------------------------------------------------------
@@ -151,14 +152,15 @@ def run_ea(config: EAConfig) -> dict:
     # ------------------------------------------------------------------
     # 0. Initialise
     # ------------------------------------------------------------------
-    print("=" * 65)
-    print("DrugEA — Evolutionary Drug Candidate Search")
-    print("=" * 65)
-    print(f"μ={config.mu}  λ={config.lambda_}  gens={config.n_gens}  "
-          f"seed={config.seed}  cx={config.cx_operator}")
-    print(f"σ_share={config.sigma_share}  α={config.alpha}  "
-          f"tournament_k={config.tournament_k}")
-    print("-" * 65)
+    if config.verbose:
+        print("=" * 65)
+        print("DrugEA — Evolutionary Drug Candidate Search")
+        print("=" * 65)
+        print(f"μ={config.mu}  λ={config.lambda_}  gens={config.n_gens}  "
+              f"seed={config.seed}  cx={config.cx_operator}")
+        print(f"σ_share={config.sigma_share}  α={config.alpha}  "
+              f"tournament_k={config.tournament_k}")
+        print("-" * 65)
 
     t_start = time.time()
 
@@ -175,7 +177,8 @@ def run_ea(config: EAConfig) -> dict:
     history: List[dict] = []
     stats = _population_stats(population, generation=0)
     history.append(stats)
-    _log(stats, archive)
+    if config.verbose:
+        _log(stats, archive)
 
     # ------------------------------------------------------------------
     # 1. Generational loop
@@ -227,16 +230,13 @@ def run_ea(config: EAConfig) -> dict:
         stats = _population_stats(population, generation=gen)
         history.append(stats)
 
-        if gen % config.log_every == 0 or gen == config.n_gens:
+        if config.verbose and (gen % config.log_every == 0 or gen == config.n_gens):
             _log(stats, archive)
 
     # ------------------------------------------------------------------
     # 2. Final report
     # ------------------------------------------------------------------
     t_elapsed = time.time() - t_start
-
-    print("-" * 65)
-    print(f"Run complete in {t_elapsed:.1f}s  ({config.n_gens} generations)")
 
     # Best molecule: prefer archive (best feasible ever); fallback to best overall
     if archive.best is not None:
@@ -246,26 +246,29 @@ def run_ea(config: EAConfig) -> dict:
 
     _, best_smiles = decode(best_chrom)
 
-    # Re-evaluate to get full EvalResult for the report
-    result: EvalResult = evaluate(best_chrom)
+    if config.verbose:
+        # Re-evaluate to get full EvalResult for the report
+        result: EvalResult = evaluate(best_chrom)
 
-    print()
-    print("Best molecule found:")
-    print(f"  SMILES       : {best_smiles}")
-    print(f"  Fitness      : {best_chrom.fitness:.4f}")
-    print(f"  Feasible     : {best_chrom.feasible}")
-    print(f"  ΔG_bind      : {result.dg_bind:.3f} kcal/mol")
-    print(f"  MW           : {result.properties['MW']:.1f} Da")
-    print(f"  logP         : {result.properties['logP']:.2f}")
-    print(f"  HBD / HBA    : {result.properties['HBD']} / {result.properties['HBA']}")
-    print(f"  SA score     : {result.properties['SA']:.2f}")
-    print(f"  PAINS alerts : {result.properties['PAINS']}")
-    print(f"  n_violations : {result.n_violations}")
-    print()
-    print(f"Archive history ({len(archive.history)} improvements):")
-    for gen_idx, fit in archive.history:
-        print(f"  gen {gen_idx:>4d}  →  fitness {fit:.4f}")
-    print("=" * 65)
+        print("-" * 65)
+        print(f"Run complete in {t_elapsed:.1f}s  ({config.n_gens} generations)")
+        print()
+        print("Best molecule found:")
+        print(f"  SMILES       : {best_smiles}")
+        print(f"  Fitness      : {best_chrom.fitness:.4f}")
+        print(f"  Feasible     : {best_chrom.feasible}")
+        print(f"  ΔG_bind      : {result.dg_bind:.3f} kcal/mol")
+        print(f"  MW           : {result.properties['MW']:.1f} Da")
+        print(f"  logP         : {result.properties['logP']:.2f}")
+        print(f"  HBD / HBA    : {result.properties['HBD']} / {result.properties['HBA']}")
+        print(f"  SA score     : {result.properties['SA']:.2f}")
+        print(f"  PAINS alerts : {result.properties['PAINS']}")
+        print(f"  n_violations : {result.n_violations}")
+        print()
+        print(f"Archive history ({len(archive.history)} improvements):")
+        for gen_idx, fit in archive.history:
+            print(f"  gen {gen_idx:>4d}  →  fitness {fit:.4f}")
+        print("=" * 65)
 
     return {
         "best_chromosome": best_chrom,
